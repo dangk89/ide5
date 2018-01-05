@@ -20,6 +20,9 @@ height: 800px;
 .crime text {
   font: 0.8rem arial, sans-serif;
 }
+.district {
+  fill: rgba(0, 0, 0, 0.4)
+}
 </style>
 <script type="text/javascript">
 d3.select(window).on('load', () => {
@@ -31,12 +34,14 @@ d3.select(window).on('load', () => {
   const map = new L.Map("map", {center: [37.75135, -122.4399], zoom: 12})
     .addLayer(new L.TileLayer("http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"));
 
+  function projectPoint(x, y) {
+    var point = map.latLngToLayerPoint(new L.LatLng(y, x));
+    this.stream.point(point.x, point.y);
+  }
+
+d3.json("sfpd_districts.geojson", json_districts => {
+
   d3.json("sf_crime.geojson", json => {
-    function projectPoint(x, y) {
-      var point = map.latLngToLayerPoint(new L.LatLng(y, x));
-      this.stream.point(point.x, point.y);
-    }
-    
     const projection = d3.geoTransform({point: projectPoint})
 
     const svg = d3.select(map.getPanes().overlayPane).append("svg")
@@ -45,7 +50,19 @@ d3.select(window).on('load', () => {
     const g = svg.append("g").attr("class", "leaflet-zoom-hide");
 
     const path = d3.geoPath(projection)
-    const feature = g.selectAll("path")
+
+    // Add districts
+    const g_d = svg.append("g").attr("class", "leaflet-zoom-hide");
+    const districts = g_d.selectAll(".district")
+      .data(json_districts.features)
+      .enter()
+      .append("path")
+      .attr("class", "district")
+      
+    districts.attr("d", path)
+
+    // Add points
+    const feature = g.selectAll(".crime")
       .data(json.features)
       .enter()
       .append("path")
@@ -79,19 +96,30 @@ d3.select(window).on('load', () => {
         topLeft = bounds[0],
         bottomRight = bounds[1];
 
+      //svg.style("left", topLeft[0] + "px")
+       //  .style("top", topLeft[1] + "px")
+	 
+
       g .attr("width", bottomRight[0] - topLeft[0])
+        .attr("height", bottomRight[1] - topLeft[1])
+        .style("left", topLeft[0] + "px")
+        .style("top", topLeft[1] + "px");
+      g_d.attr("width", bottomRight[0] - topLeft[0])
         .attr("height", bottomRight[1] - topLeft[1])
         .style("left", topLeft[0] + "px")
         .style("top", topLeft[1] + "px");
 
       feature.attr("d", path);
+      districts.attr("d", path);
     }
-    map.on("zoom", reset);
+    map.on("zoomend", reset);
+    map.on("moveend", reset);
 
     // prepare the map
     reset();
 
   })
+});
 });
 </script>
 </body>
