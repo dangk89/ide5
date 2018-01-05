@@ -52,7 +52,7 @@ d3.json("sfpd_districts.geojson", json_districts => {
     const path = d3.geoPath(projection)
 
     // Add districts
-    const g_d = svg.append("g").attr("class", "leaflet-zoom-hide");
+    const g_d = g.append("g")
     const districts = g_d.selectAll(".district")
       .data(json_districts.features)
       .enter()
@@ -62,7 +62,8 @@ d3.json("sfpd_districts.geojson", json_districts => {
     districts.attr("d", path)
 
     // Add points
-    const feature = g.selectAll(".crime")
+    const g_f = g.append("g")
+    const feature = g_f.selectAll(".crime")
       .data(json.features)
       .enter()
       .append("path")
@@ -76,8 +77,8 @@ d3.json("sfpd_districts.geojson", json_districts => {
 	return tmp.filter((v, i, a) => a.indexOf(v) == i);
     }()
     const categoryScale = d3.scaleBand().domain(categories).range([82, height])
-    const types = svg.append("g")
-       .selectAll(".type")
+    const g_t = svg.append("g")
+    const types = g_t.selectAll(".type")
        .data(categories)
        .enter()
        .append("text")
@@ -90,30 +91,24 @@ d3.json("sfpd_districts.geojson", json_districts => {
 	   d3.selectAll("." + d.slice(0, 3)).style("opacity", 1)
 	})
     
-    // Reposition the SVG to cover the features.
+    // Reposition the SVG when the map moves
+    var pos = {x:0, y:0} // starting position
     function reset() {
-      var bounds = path.bounds(json),
-        topLeft = bounds[0],
-        bottomRight = bounds[1];
+      var bounds = path.bounds(json)
 
-      //svg.style("left", topLeft[0] + "px")
-       //  .style("top", topLeft[1] + "px")
-	 
+      svg.style("left", -pos.x + "px")
+        .style("top", -pos.y + "px");
 
-      g .attr("width", bottomRight[0] - topLeft[0])
-        .attr("height", bottomRight[1] - topLeft[1])
-        .style("left", topLeft[0] + "px")
-        .style("top", topLeft[1] + "px");
-      g_d.attr("width", bottomRight[0] - topLeft[0])
-        .attr("height", bottomRight[1] - topLeft[1])
-        .style("left", topLeft[0] + "px")
-        .style("top", topLeft[1] + "px");
+      g.attr("transform", "translate(" + pos.x + ", " + pos.y +")")
+      g_t.attr("transform", "translate(" - pos.x + ", " + pos.y +")")
 
       feature.attr("d", path);
       districts.attr("d", path);
     }
-    map.on("zoomend", reset);
-    map.on("moveend", reset);
+    map.on("moveend", m => {
+      pos = m.target.dragging._lastPos
+      reset()
+    })
 
     // prepare the map
     reset();
