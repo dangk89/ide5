@@ -8,49 +8,9 @@
      type="text/css"/>
   </head>
   <body>
-<h1>Mapping crime</h1>
+<h1>Music cloud</h1>
 <p>nbs151 (Dan Graakjær)   and   xtp778 (Jens Egholm)</p>
-<p>
-The following visualisation shows the different crime incidents, recorded across the
-districts in down-town San Francisco, USA. To the left of the map is a list of the
-crimes that were recorded by the police. Hovering over one instance of crime
-highlights that particular crime on the map.
-</p>
-<p>
-OpenStreetMaps is used to background the geographical features of San Francisco.
-</p>
-<div id="map"></div>
-<hr>
-<h2>Findings</h2>
-<p>
-Our findings relate to the geographical distribution of the various crimes. Just from having
-a simple map visualisation, it's feasible to gain insights on crime.
-</p>
-<ol>
-<li>
-  The first finding from the visualisation relates to the warrants and drugs/narcotics. They
-  are all centered around 3 areas in San Francisco: Down-town, 16th street and Stony Hill.
-</li>
-<li>
-  The second finding pertains to the crime of prostitution. On the map the prostitution is
-  clearly centered on two areas: Larkin Street down-town and South Van Ness Avenue.
-</ol>
-<h2>Final project description</h2>
-<p>
-  For the final project, we would like to take an explorative approach on a larger music data set. 
-If possible, we would like to work with the <a href="https://labrosa.ee.columbia.edu/millionsong">Million Songs data set</a>  as it's both extensive and rather detailed. One of the goals here could be to explore some of the musical
-'trends' throughout the ages, and try to visualize them in a meaningful way. The final product could look 
-something like <a href="https://research.google.com/bigpicture/music/">this</a>, but with another perspective.
-<p>
-While this project would be the most interesting, it would 
-also be the most time consuming, as we're dealing with a very 
-large data set (280 GB), and will need a lot of preprocessing and 
-analysis before the visualization process can 
-even begin. To scale down this project, we could take a 
-similar approach but use a smaller data sets (<a href="https://www.kaggle.com/nadintamer/top-tracks-of-2017">Top tracks of 2017</a> or <a href="https://www.kaggle.com/geomack/spotifyclassification">Spotify Classification</a>)
-and only analyse certain genres or time periods. One way of doing this would be to work with genres exclusively, and create a 'genre tree', describing different genres and subgenres and their relation to eachother (like this <a href="http://techno.org/electronic-music-guide/">Like this</a> or <a href="https://www.concerthotels.com/100-years-of-rock/">this</a>). While we wouldn't need to work with large amounts of data, we would most likely have to create the tree manually using different sources which could also be rather time consuming.
-
-</p>
+<svg id="svg"></svg>
 <style>
 h1 {
     font-size:350%;
@@ -60,116 +20,35 @@ font-family: 'GlacialIndifferenceRegular';
 margin-left:30vw;
 width: 60vw;
 }
-#map {
+#svg {
 margin-left: -20vw;
-width: 800px;
-height: 800px;
-width 80vw;
-}
-.crime {
- fill: transparent;
- stroke: rgba(0, 0, 0, 0.7);
- stroke-width:2px;
-}
-.crime text {
-  font: 0.8rem arial, sans-serif;
-}
-.district {
-  fill: rgba(0, 0, 0, 0.4)
 }
 </style>
 <script type="text/javascript">
 d3.select(window).on('load', () => {
   const width = window.innerWidth * 0.8;
   const height = window.innerHeight * 0.8;
+  const padding = 50;
 
-  document.getElementById("map").style.height = height + "px";
-  document.getElementById("map").style.width = width + "px";
-  const map = new L.Map("map", {center: [37.75135, -122.4399], zoom: 12})
-    .addLayer(new L.TileLayer("http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"));
+  const svg = d3.select("#svg")
+    .attr("width", width)
+    .attr("height", height)
+  const g = svg.append("g")
 
-  function projectPoint(x, y) {
-    var point = map.latLngToLayerPoint(new L.LatLng(y, x));
-    this.stream.point(point.x, point.y);
-  }
-
-d3.json("sfpd_districts.geojson", json_districts => {
-
-  d3.json("sf_crime.geojson", json => {
-    const projection = d3.geoTransform({point: projectPoint})
-
-    const svg = d3.select(map.getPanes().overlayPane).append("svg")
-      .attr("width", width)
-      .attr("height", height)
-    const g = svg.append("g").attr("class", "leaflet-zoom-hide");
-
-    const path = d3.geoPath(projection)
-
-    // Add districts
-    //const g_d = g.append("g")
-    //const districts = g_d.selectAll(".district")
-    //  .data(json_districts.features)
-    //  .enter()
-    //  .append("path")
-    //  .attr("class", "district")
-      
-    //districts.attr("d", path)
-
-    // Add points
-    const g_f = g.append("g")
-    const feature = g_f.selectAll(".crime")
-      .data(json.features)
-      .enter()
-      .append("path")
-      .attr("class", d => "crime " + d.properties.Category.slice(0, 3))
-
-    feature.attr("d", path)
-
-    // Extract crime categories
-    const categories = function() {
-	const tmp = json.features.map(f => f.properties.Category);
-	return tmp.filter((v, i, a) => a.indexOf(v) == i);
-    }()
-    const categoryScale = d3.scaleBand().domain(categories).range([82, height])
-    const g_t = svg.append("g")
-    const types = g_t.selectAll(".type")
-       .data(categories)
-       .enter()
-       .append("text")
-       .attr("x", 10)
-       .attr("y", (d => categoryScale(d)))
-       .text(d => d)
-       .on("mouseover", d => {
-	   console.log(d3.selectAll("path:not(." + d.slice(0, 3) + ")"))
-	   d3.selectAll(".crime:not(." + d.slice(0, 3) + ")").style("opacity", 0)
-	   d3.selectAll("." + d.slice(0, 3)).style("opacity", 1)
-	})
-    
-    // Reposition the SVG when the map moves
-    var pos = {x:0, y:0} // starting position
-    function reset() {
-      var bounds = path.bounds(json)
-
-      svg.style("left", -pos.x + "px")
-        .style("top", -pos.y + "px");
-
-      g.attr("transform", "translate(" + pos.x + ", " + pos.y +")")
-      g_t.attr("transform", "translate(" - pos.x + ", " + pos.y +")")
-
-      feature.attr("d", path);
-      districts.attr("d", path);
-    }
-    map.on("zoomend", reset)
-    map.on("moveend", m => {
-      pos = m.target.dragging._lastPos
-      reset()
-    })
-
-    // prepare the map
-    reset();
-
-  })
-});
+  d3.json("tags.json", tags => {
+    const scaler_genre = d3.scaleLinear().domain([d3.min(tags, d => d.n), d3.max(tags, d => d.n)]).range([2, 30]) // scale radius
+    const scalex_genre = d3.scaleLinear().domain([d3.min(tags, d => d.x), d3.max(tags, d => d.x)]).range([padding, width - padding]) // scale x
+    const scaley_genre = d3.scaleLinear().domain([d3.min(tags, d => d.y), d3.max(tags, d => d.y)]).range([padding, height - padding]) // scale y
+    g.selectAll("circle")
+     .data(tags)
+     .enter()
+     .append('circle')
+     .attr('cx', d => scalex_genre(d.x))
+     .attr('cy', d => scaley_genre(d.y))
+     .attr('r', d => scaler_genre(d.n))
+     .append("svg:title")
+     .text(d => d.name)
+  });
 });
 </script>
 </body>
